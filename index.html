@@ -142,12 +142,14 @@
     setInterval(() => { globalBaseHue = (globalBaseHue + 1) % 360; }, 1000);
 
     // ─── SHAPES ─────────────────────────────────────────────────────────────────
-    // Each shape is { clipPath, borderRadius }
+    // Shapes natural to divs (rect/square) — the default form
+    const RECTANGULAR_SHAPES = [
+      { clipPath: 'none', borderRadius: '0%' },  // rect / square
+    ];
+
+    // Non-natural shapes — used sparingly (premium feel)
     // clip-path morphing is smooth only between polygons with the same vertex count.
-    // Different counts snap-cut — which is also an interesting visual event.
-    const SHAPES = [
-      // Rectangular (no clip-path, controlled by border-radius)
-      { clipPath: 'none', borderRadius: '0%' },
+    const NON_RECTANGULAR_SHAPES = [
       { clipPath: 'none', borderRadius: '50%' },                                   // circle
       { clipPath: 'none', borderRadius: '60% 40% 30% 70% / 60% 30% 70% 40%' },   // organic blob
       { clipPath: 'none', borderRadius: '30% 70% 70% 30% / 30% 30% 70% 70%' },   // organic blob 2
@@ -170,8 +172,12 @@
       { clipPath: 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)', borderRadius: '0%' },
     ];
 
-    function applyShape(div) {
-      const shape = SHAPES[randInt(0, SHAPES.length - 1)];
+    // isParent = true  → 5%  chance of non-rectangular shape (premium rarity)
+    // isParent = false → 25% chance of non-rectangular shape (still relatively rare)
+    function applyShape(div, isParent = false) {
+      const threshold = isParent ? 0.05 : 0.25;
+      const pool = Math.random() < threshold ? NON_RECTANGULAR_SHAPES : RECTANGULAR_SHAPES;
+      const shape = pool[randInt(0, pool.length - 1)];
       div.style.clipPath = shape.clipPath;
       div.style.borderRadius = shape.borderRadius;
     }
@@ -263,8 +269,8 @@
       div.style.setProperty('--base-height', divHeight + 'px');
       div.style.scrollbarColor = `${scrollColor} rgba(0,0,0,0.3)`;
 
-      // Apply a random geometric shape
-      applyShape(div);
+      // Apply a geometric shape — parents rarely non-rectangular (5%), children sometimes (25%)
+      applyShape(div, depth === 0);
 
       // Internal scrollable content
       const content = document.createElement('div');
@@ -493,8 +499,8 @@
             const content = div.firstChild;
             if (content) content.style.background = createHarmonicGradient((newHue + GOLDEN_ANGLE) % 360);
 
-            // Shape morph — 20% chance per updated div
-            if (Math.random() > 0.8) applyShape(div);
+            // Shape morph — 20% chance per updated div, respecting parent/child rarity rules
+            if (Math.random() > 0.8) applyShape(div, div.dataset.mother === 'true');
           }
         });
       }, rand(4000, 8000));
